@@ -1,0 +1,36 @@
+---
+  - name: Install Apache and Tomcat
+    hosts: web1.abc.com
+#    connection: local
+#    sudo: yes
+    become: yes
+    gather_facts: False
+    tasks:
+     - name: install apache
+       apt: name=apache2 update_cache=yes state=present
+     - name: starting httpd service
+       service: name=apache2 state=started enabled=yes
+     - name: Install latest version of "openjdk-7-jdk" ignoring "install-recommends"
+       apt: name=openjdk-7-jdk state=latest install_recommends=no
+     - name: Installing mod_jk library
+       apt: name=libapache2-mod-jk state=latest
+     - name: Creating mod_jk file 
+       copy: src=jk.conf dest=/etc/apache2/mods-available owner=root group=root mode=0644 
+     - name: Creating worker file
+       copy: src=jk_workers.properties dest=/etc/apache2 owner=root group=root mode=0644
+     - name: Restarting Apache
+       command: /etc/init.d/apache2 restart
+     - name: download tomcat
+       get_url: url=https://archive.apache.org/dist/tomcat/tomcat-7/v7.0.78/bin/apache-tomcat-7.0.78.tar.gz dest=/tmp
+     - name: Creating Tomcat folder /usr/local/tomcat
+       file: path=/usr/local/tomcat state=directory mode=0755
+     - name: extract archive
+       unarchive: src=/tmp/apache-tomcat-7.0.78.tar.gz dest=/usr/local/tomcat copy=no
+     - name: Copy JAVA and CATALINA Enviornment variables
+       copy: src=bashrc_variable.sh dest=/tmp owner=root group=root mode=0644
+     - name: Execuing Shell script for Setting Up enviornmental variables
+       command: sh /tmp/bashrc_variable.sh
+     - name: create tomcat users
+       copy: src=tomcat-users.xml dest=/usr/local/tomcat/apache-tomcat-7.0.78/conf/
+     - name: start tomcat
+       command: nohup /usr/local/tomcat/apache-tomcat-7.0.78/bin/startup.sh &
